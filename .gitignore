@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.Python
+.viszmo-chrome/
+.DS_Store
+Thumbs.db
+

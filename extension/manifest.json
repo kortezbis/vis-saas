@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Web Copilot",
+  "version": "1.0.0",
+  "description": "Stick Web Copilot to Chrome/Edge as a native side panel.",
+  "action": {
+    "default_title": "Open Web Copilot"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["sidePanel"],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src http://127.0.0.1:8000 http://localhost:8000;"
+  }
+}
