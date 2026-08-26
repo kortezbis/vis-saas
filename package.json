@@ -20,6 +20,7 @@
   "build": {
     "appId": "com.viszmo.desktop",
     "productName": "Viszmo",
+    "artifactName": "Viszmo-Setup-${version}.${ext}",
     "directories": {
       "output": "release"
     },
