@@ -256,10 +256,10 @@ def work_area() -> Rect:
         ctypes.windll.user32.SystemParametersInfoW(SPI_GETWORKAREA, 0, ctypes.byref(rect), 0)
         return Rect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
     except Exception:
-        import pyautogui
-
-        w, h = pyautogui.size()
-        return Rect(0, 0, w, h)
+        # The browser automation path never reads the desktop. This fallback
+        # only gives the temporary sidebar a sane size if native metrics are
+        # unavailable (for example in a headless test process).
+        return Rect(0, 0, 1280, 800)
 
 
 def monitor_work_area_containing(x: int, y: int) -> Rect:
@@ -329,6 +329,31 @@ def pin_browser(win: Any) -> None:
 def clear_pin() -> None:
     global _pinned_hwnd
     _pinned_hwnd = None
+
+
+def pinned_hwnd() -> int | None:
+    """Return the browser window currently pinned as the assignment target."""
+    return _pinned_hwnd
+
+
+def begin_task_target() -> tuple[Any | None, int | None]:
+    """Pin the currently selected browser for one agent run.
+
+    The foreground browser is used only to choose the target at launch time.
+    Once pinned, later foreground-window changes must not retarget screenshots
+    or input to a different browser.
+    """
+    previous = _pinned_hwnd
+    browser = find_browser_window()
+    if browser is not None:
+        pin_browser(browser)
+    return browser, previous
+
+
+def end_task_target(previous: int | None) -> None:
+    """Restore the pin state that existed before an agent run."""
+    global _pinned_hwnd
+    _pinned_hwnd = previous
 
 
 def is_pinned(win: Any) -> bool:
@@ -420,6 +445,13 @@ def find_copilot_window() -> Any | None:
 
 def find_browser_window() -> Any | None:
     """Pinned, last-seen, or frontmost browser — never the largest random Chrome window."""
+    if _pinned_hwnd:
+        pinned = _native_from_hwnd(_pinned_hwnd)
+        if pinned is not None and _is_assignment_window(pinned):
+            return pinned
+        # A pinned target may have been closed. Do not silently switch the
+        # agent to a different browser just because focus changed.
+        return None
     track_foreground_browser()
     for hwnd in (_pinned_hwnd, _last_seen_hwnd):
         win = _native_from_hwnd(hwnd)

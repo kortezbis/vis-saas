@@ -3,11 +3,18 @@
 !.env.example
 .venv/
 venv/
+.build-python/
 __pycache__/
 *.pyc
 *.pyo
 .Python
 .viszmo-chrome/
+node_modules/
+dist/
+dist-release/
+build/
+build-release/
+release/
 .DS_Store
 Thumbs.db
 

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --card-bg: #1E1E1E;
+    --card-border: #2C2C2C;
+    --text-color: #E2E8F0;
+    --text-muted: #94A3B8;
+    --accent: #0ea5e9;
+    --accent-glow: rgba(14, 165, 233, 0.35);
+    --ok: #22c55e;
+    --warn: #f59e0b;
+  }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: transparent;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    -webkit-app-region: drag; user-select: none;
+  }
+  #card {
+    position: relative;
+    display: flex; align-items: center; gap: 12px;
+    height: 100%; box-sizing: border-box; padding: 12px 34px 12px 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+  #dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    background: #525252;
+  }
+  #dot.running { background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); animation: pulse 1.2s infinite; }
+  #dot.finished { background: var(--ok); box-shadow: 0 0 10px rgba(34, 197, 94, 0.35); }
+  #dot.stopped { background: var(--warn); box-shadow: 0 0 8px rgba(245, 158, 11, 0.3); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  #main { min-width: 0; flex: 1; -webkit-app-region: no-drag; }
+  #title {
+    font-size: 10px; font-weight: 800; letter-spacing: 1.2px;
+    color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;
+  }
+  #question { font-size: 16px; font-weight: 700; color: var(--text-color); line-height: 1.25; }
+  #detail {
+    font-size: 11px; color: var(--text-muted); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px;
+  }
+  #closeBtn {
+    position: absolute; top: 4px; right: 6px;
+    width: 22px; height: 22px; border: none; border-radius: 7px;
+    background: transparent; color: var(--text-muted);
+    font-size: 14px; line-height: 1; cursor: pointer;
+    -webkit-app-region: no-drag; display: flex; align-items: center; justify-content: center;
+  }
+  #closeBtn:hover { background: #2C2C2C; color: var(--text-color); }
+</style>
+</head>
+<body>
+  <div id="card">
+    <div id="dot"></div>
+    <div id="main">
+      <div id="title">Viszmo</div>
+      <div id="question">Idle</div>
+      <div id="detail">Waiting for a task</div>
+    </div>
+    <button id="closeBtn" title="Hide widget" aria-label="Hide widget">×</button>
+  </div>
+<script>
+  const dot = document.getElementById("dot");
+  const question = document.getElementById("question");
+  const detail = document.getElementById("detail");
+  const closeBtn = document.getElementById("closeBtn");
+
+  closeBtn.addEventListener("click", () => {
+    if (window.viszmoWidget && window.viszmoWidget.close) window.viszmoWidget.close();
+  });
+
+  let lastState = "";
+  let audioCtx = null;
+
+  function chime(ok) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      const notes = ok ? [740, 932, 1245] : [392, 294];
+      const t0 = audioCtx.currentTime + 0.02;
+      notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const start = t0 + i * 0.13;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.25, start + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.42);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(start); osc.stop(start + 0.45);
+      });
+    } catch (error) { /* visual state still updates */ }
+  }
+
+  function render(status) {
+    const state = status.state || "idle";
+    const q = status.question || "";
+    dot.className = state === "running" ? "running" : state;
+    if (state === "running") {
+      question.textContent = q ? q + " · working…" : "Working…";
+    } else if (state === "finished") {
+      if (lastState !== "finished") chime(true);
+      question.textContent = "✓ Finished" + (q ? " · " + q : "");
+    } else if (state === "stopped") {
+      if (lastState !== "stopped") chime(false);
+      question.textContent = "◼ Stopped";
+    } else {
+      question.textContent = "Idle";
+    }
+    detail.textContent = status.text || "Waiting for a task";
+    detail.title = status.text || "";
+    lastState = state;
+  }
+
+  async function poll() {
+    try {
+      const response = await fetch("/live-status", { cache: "no-store" });
+      if (response.ok) render(await response.json());
+    } catch (error) { /* backend restarting; retry next tick */ }
+  }
+  poll();
+  setInterval(poll, 700);
+</script>
+</body>
+</html>

@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 import os
-import subprocess
-import sys
+import argparse
+import socket
 import threading
 import time
 import urllib.request
@@ -13,51 +13,28 @@ import urllib.request
 import uvicorn
 
 import agent_engine
+import chrome_session
 import layout
-import overlay
 from server import DEFAULT_HOST, DEFAULT_PORT, DEFAULT_SIDEBAR_WIDTH, app
 
 agent_engine.load_env()
 agent_engine.setup_logging()
 
 
-def _pids_listening_on(port: int) -> list[int]:
-    if sys.platform != "win32":
-        return []
-    try:
-        output = subprocess.check_output(["netstat", "-ano"], text=True, errors="ignore")
-    except Exception:
-        return []
-    pids: list[int] = []
-    marker = f"127.0.0.1:{port}"
-    for line in output.splitlines():
-        if marker not in line or "LISTENING" not in line:
-            continue
-        parts = line.split()
-        try:
-            pid = int(parts[-1])
-        except (IndexError, ValueError):
-            continue
-        if pid not in pids and pid != os.getpid():
-            pids.append(pid)
-    return pids
+def _choose_server_port(preferred: int) -> int:
+    """Use 8000 when free; otherwise choose an unused loopback port.
 
-
-def _free_port(port: int) -> None:
-    """Stop a leftover Viszmo server so this launch can bind 8000."""
-    for pid in _pids_listening_on(port):
-        try:
-            subprocess.run(
-                ["taskkill", "/PID", str(pid), "/F"],
-                check=False,
-                capture_output=True,
-                text=True,
-            )
-        except Exception:
-            pass
-    deadline = time.time() + 3.0
-    while time.time() < deadline and _pids_listening_on(port):
-        time.sleep(0.15)
+    The launcher must never terminate an unrelated process that happens to
+    use the preferred development port.
+    """
+    for candidate in (preferred, 0):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            try:
+                sock.bind((DEFAULT_HOST, candidate))
+            except OSError:
+                continue
+            return int(sock.getsockname()[1])
+    raise RuntimeError("Could not find a local port for the Viszmo desktop server.")
 
 
 def _wait_for_server(url: str, timeout: float = 15.0) -> None:
@@ -70,6 +47,32 @@ def _wait_for_server(url: str, timeout: float = 15.0) -> None:
         except Exception:
             time.sleep(0.15)
     raise RuntimeError(f"Server did not start at {url}")
+
+
+def _maybe_launch_assignment_browser(
+    *,
+    url: str | None = None,
+    browser: str = "auto",
+    disabled: bool = False,
+) -> None:
+    if disabled:
+        return
+    enabled = os.getenv("VISZMO_AUTO_LAUNCH_BROWSER", "0").strip().lower()
+    if enabled not in {"1", "true", "yes", "on"}:
+        return
+    assignment_url = (
+        url
+        or os.getenv("VISZMO_START_URL", "")
+        or os.getenv("VISZMO_ASSIGNMENT_URL", "")
+        or chrome_session.DEFAULT_START_URL
+    ).strip() or chrome_session.DEFAULT_START_URL
+    selected_browser = (
+        browser if browser and browser != "auto" else os.getenv("VISZMO_BROWSER", "auto")
+    ).strip().lower() or "auto"
+    try:
+        chrome_session.launch_viszmo_chrome(assignment_url, browser=selected_browser)
+    except Exception as exc:
+        raise SystemExit(f"Could not start the managed assignment browser: {exc}") from exc
 
 
 class SidebarController:
@@ -93,7 +96,7 @@ class SidebarController:
             self._main.show()
 
 
-def _open_sidebar(host: str, port: int) -> None:
+def _open_sidebar(host: str, port: int, start_path: str = "/") -> None:
     try:
         import webview
     except ImportError as exc:
@@ -108,7 +111,7 @@ def _open_sidebar(host: str, port: int) -> None:
     controller = SidebarController()
     controller._main = webview.create_window(
         title="Viszmo",
-        url=f"http://{host}:{port}/",
+        url=f"http://{host}:{port}{start_path}",
         js_api=controller,
         width=width,
         height=height,
@@ -137,26 +140,71 @@ def _open_sidebar(host: str, port: int) -> None:
     )
 
     def after_start() -> None:
-        overlay.ensure_started()
         if controller._peek is not None:
             controller._peek.hide()
 
     webview.start(after_start)
 
 
-def main() -> int:
-    _free_port(DEFAULT_PORT)
-    config = uvicorn.Config(app, host=DEFAULT_HOST, port=DEFAULT_PORT, log_level="info")
+def main(argv: list[str] | None = None, *, dashboard: bool = False) -> int:
+    parser = argparse.ArgumentParser(description="Start the Viszmo desktop app")
+    parser.add_argument(
+        "--url",
+        default=None,
+        help="Optional browser start URL (default: Google)",
+    )
+    parser.add_argument(
+        "--browser",
+        choices=("auto", "chrome", "edge", "brave"),
+        default="auto",
+        help="Chromium browser Viszmo should own (default: auto)",
+    )
+    parser.add_argument(
+        "--task",
+        default=None,
+        help="Optional task note to prefill in the sidebar",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Do not launch the managed browser; useful only for local diagnostics",
+    )
+    parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="Open the basic launch dashboard before the workspace",
+    )
+    args = parser.parse_args(argv)
+    dashboard_mode = dashboard or args.dashboard
+    if args.task is not None:
+        os.environ["VISZMO_INITIAL_TASK"] = args.task
+    if args.url is not None:
+        os.environ["VISZMO_START_URL"] = args.url
+    if args.browser != "auto":
+        os.environ["VISZMO_BROWSER"] = args.browser
+
+    server_port = _choose_server_port(DEFAULT_PORT)
+    config = uvicorn.Config(app, host=DEFAULT_HOST, port=server_port, log_level="info")
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
-    _wait_for_server(f"http://{DEFAULT_HOST}:{DEFAULT_PORT}/health")
+    _wait_for_server(f"http://{DEFAULT_HOST}:{server_port}/health")
     if not getattr(server, "started", False):
         raise SystemExit(
             f"Could not start Viszmo on {DEFAULT_HOST}:{DEFAULT_PORT}. "
             "Close the other instance and try again."
         )
-    _open_sidebar(DEFAULT_HOST, DEFAULT_PORT)
+    if not dashboard_mode:
+        _maybe_launch_assignment_browser(
+            url=args.url,
+            browser=args.browser,
+            disabled=args.no_browser,
+        )
+    _open_sidebar(
+        DEFAULT_HOST,
+        server_port,
+        start_path="/dashboard" if dashboard_mode else "/",
+    )
     server.should_exit = True
     return 0
 

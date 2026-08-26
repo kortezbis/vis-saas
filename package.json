@@ -1,0 +1,74 @@
+{
+  "name": "viszmo-desktop",
+  "version": "0.2.0",
+  "description": "Viszmo desktop assignment browser",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kortezbis/vis-saas.git"
+  },
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:backend": "python scripts/build_backend.py",
+    "dist": "npm run build:backend && electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^36.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.viszmo.desktop",
+    "productName": "Viszmo",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "backend_server.py",
+      "server.py",
+      "agent_engine.py",
+      "cost_model.py",
+      "chrome_session.py",
+      "layout.py",
+      "virtual_mouse.py",
+      "index.html",
+      "dashboard.html",
+      "peek.html",
+      "widget.html",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "dist-release/backend",
+        "to": "backend"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/viszmo.ico"
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.education"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "kortezbis",
+      "repo": "vis-saas",
+      "releaseType": "release"
+    },
+    "protocols": [
+      {
+        "name": "Viszmo",
+        "schemes": [
+          "viszmo"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  }
+}
+

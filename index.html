@@ -7,47 +7,96 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; outline: none; font-family: "Segoe UI", sans-serif; }
     html, body { width: 100%; height: 100%; background: #131314; color: #e8eefc; border: none; }
-    body { display: flex; flex-direction: column; min-height: 100%; -webkit-app-region: drag; }
+    body { display: flex; flex-direction: column; min-height: 100%; padding-bottom: 10px; -webkit-app-region: drag; }
     .top {
-      padding: 12px 14px 8px; -webkit-app-region: drag; user-select: none;
+      padding: 13px 14px 10px; -webkit-app-region: drag; user-select: none;
       display: flex; justify-content: space-between; align-items: center; cursor: move;
     }
-    .brand { display: flex; align-items: center; gap: 10px; }
-    .brand-logo { height: 28px; width: auto; max-width: 140px; object-fit: contain; display: block; }
-    .logo-icon { width: 28px; height: 28px; object-fit: contain; display: block; }
-    h1 { font-size: 16px; font-weight: 700; }
-    .top-right { -webkit-app-region: no-drag; display: flex; align-items: center; }
-    .close {
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-logo { height: 25px; width: auto; max-width: 132px; object-fit: contain; display: block; }
+    .panel-context { display: flex; min-width: 0; flex-direction: column; gap: 1px; }
+    .panel-context strong { color: #e8eefc; font-size: 11px; letter-spacing: .02em; }
+    .panel-context span { color: #6f7f9d; font-size: 10px; white-space: nowrap; }
+    .top-right { -webkit-app-region: no-drag; display: flex; align-items: center; gap: 4px; }
+    .connection-status {
+      display: inline-flex; align-items: center; gap: 6px; margin-right: 2px;
+      padding: 5px 8px; border: 1px solid #27344b; border-radius: 999px;
+      color: #8b9bb8; font-size: 10px; font-weight: 700; white-space: nowrap;
+    }
+    .connection-dot { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; }
+    .connection-status.ready { border-color: rgba(134,239,172,.22); color: #86efac; }
+    .connection-status.ready .connection-dot { background: #86efac; box-shadow: 0 0 0 3px rgba(134,239,172,.1); }
+    .connection-status.offline { color: #fca5a5; }
+    .connection-status.offline .connection-dot { background: #f87171; }
+    .mode-section { padding: 0 14px 10px; -webkit-app-region: no-drag; }
+    .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .section-heading strong { color: #c5d4f0; font-size: 11px; font-weight: 800; }
+    .section-heading span { color: #6f7f9d; font-size: 10px; }
+    .mode-row { display: flex; gap: 6px; }
+    .mode-row .mode-btn { flex: 1; }
+    .mode-btn {
+      min-height: 35px; border: 1px solid #2a3142; border-radius: 10px; padding: 7px 9px;
+      background: #1a1a1b; color: #8b9bb8; font-size: 11px; font-weight: 700; cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      -webkit-app-region: no-drag;
+    }
+    .mode-btn:hover { color: #e8eefc; border-color: #3b4a66; }
+    .mode-btn.on {
+      background: rgba(29,127,255,0.18); color: #e8eefc; border-color: #1d7fff;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 0 0 2px rgba(29,127,255,.06);
+    }
+    .mode-hint {
+      margin: 0 14px 10px; padding: 9px 10px; border: 1px solid #27344b; border-radius: 10px;
+      background: rgba(19, 23, 32, .72); font-size: 11px; color: #a4b3cc; line-height: 1.4;
+      -webkit-app-region: no-drag;
+    }
+    .mode-hint.fast { border-color: rgba(134,239,172,.2); color: #86efac; }
+    .icon-btn {
       width: 28px; height: 28px; border: none; border-radius: 8px; cursor: pointer;
       background: transparent; color: #8b9bb8; padding: 0;
       display: grid; place-items: center; flex-shrink: 0;
+      transition: background 0.15s ease, color 0.15s ease;
     }
-    .close svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-    .close:hover { background: #1a1a1b; color: #e8eefc; }
-    .launch-wrap, .actions { padding: 0 14px 10px; -webkit-app-region: no-drag; }
-    .auto-hint { padding: 0 14px 8px; font-size: 11px; color: #8b9bb8; -webkit-app-region: no-drag; }
-    .launch {
-      width: 100%; border: none; cursor: pointer; color: #fff;
-      background: #1d7fff; border-radius: 12px; padding: 12px; font-weight: 800; font-size: 15px;
+    .icon-btn svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .icon-btn:hover { background: #1a1a1b; color: #e8eefc; }
+    .icon-btn.copied { color: #86efac; background: rgba(134,239,172,0.12); }
+    .activity-header {
+      display: flex; align-items: center; justify-content: space-between; padding: 0 16px 6px;
+      color: #c5d4f0; font-size: 11px; font-weight: 800; -webkit-app-region: no-drag;
     }
-    .launch:disabled { opacity: .55; cursor: not-allowed; }
-    .check { list-style: none; padding: 0 14px 8px; font-size: 12px; color: #8b9bb8; -webkit-app-region: no-drag; }
-    .check li { padding: 4px 0; }
-    .check li.on { color: #7dd3fc; }
-    .check li.done { color: #86efac; }
+    .activity-header span:last-child { color: #6f7f9d; font-size: 10px; font-weight: 700; }
     .logs {
-      flex: 1; margin: 0 14px 8px; background: #1a1a1b; border-radius: 10px; border: none;
-      padding: 8px; overflow-y: auto; min-height: 56px; user-select: text; cursor: text;
+      flex: 1; margin: 0 14px 10px; background: #1a1a1b; border: 1px solid #252d3f; border-radius: 12px;
+      padding: 10px; overflow-y: auto; min-height: 80px; user-select: text; cursor: text;
       -webkit-app-region: no-drag; -webkit-user-select: text;
     }
+    .msg {
+      padding: 7px 8px; margin-bottom: 6px; color: #b7c4dc; font-size: 12px;
+      line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere;
+    }
+    .msg.status { color: #8b9bb8; }
+    .msg.error { color: #fca5a5; }
+    .msg.answer {
+      background: #131314; border: 1px solid #2a3142; border-radius: 10px;
+      color: #e8eefc; padding: 9px 10px;
+    }
+    .msg.welcome { display: flex; flex-direction: column; gap: 3px; padding: 10px; border: 1px dashed #35415a; border-radius: 10px; background: rgba(19, 23, 32, .6); }
+    .msg.welcome strong { color: #e8eefc; font-size: 12px; }
+    .msg.welcome span { color: #8b9bb8; font-size: 11px; }
+    .answer-title { color: #86efac; font-size: 11px; font-weight: 800; margin-bottom: 3px; }
+    .answer-question { color: #8b9bb8; font-size: 11px; margin-bottom: 5px; }
+    .answer-value { color: #e8eefc; font-size: 13px; font-weight: 700; }
     .composer {
-      margin: 0 14px 8px; background: #1a1a1b; border-radius: 16px;
-      padding: 8px 8px 6px; min-height: 118px; display: flex; flex-direction: column;
+      margin: 0 14px; background: #1a1a1b; border: 1px solid #252d3f; border-radius: 14px;
+      padding: 8px 8px 7px; min-height: 128px; display: flex; flex-direction: column;
       -webkit-app-region: no-drag;
     }
+    .composer-heading { display: flex; justify-content: space-between; gap: 8px; padding: 1px 4px 6px; color: #c5d4f0; font-size: 11px; font-weight: 800; }
+    .composer-heading span:last-child { color: #6f7f9d; font-size: 10px; font-weight: 600; }
     .tab-chip {
       display: flex; align-items: center; gap: 8px;
       background: #131314; border-radius: 10px; padding: 6px 8px; margin-bottom: 6px;
+      cursor: pointer;
     }
     .tab-chip.off { opacity: .55; }
     .tab-icon {
@@ -74,99 +123,207 @@
       display: flex; align-items: center; justify-content: space-between;
       padding: 4px 2px 2px; gap: 8px;
     }
-    .composer-hint { font-size: 11px; color: #8b9bb8; min-width: 0;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    .keyboard-help { color: #61708b; font-size: 10px; }
+    .run-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 31px; padding: 6px 13px; border: none; border-radius: 8px; cursor: pointer;
+      background: #1d7fff; color: #fff; font-weight: 700; font-size: 13px;
+      flex-shrink: 0; transition: background 0.15s ease, box-shadow 0.15s ease;
     }
-    .send {
-      width: 32px; height: 32px; border: none; border-radius: 10px; cursor: pointer;
-      background: #1d7fff; color: #fff; display: grid; place-items: center; flex-shrink: 0;
+    .run-btn:hover { background: #1a6edf; }
+    .run-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .run-btn.running {
+      background: #dc2626;
+      animation: pulse-border 1.5s infinite alternate;
     }
-    .send svg { width: 16px; height: 16px; fill: currentColor; }
-    .send:disabled { opacity: .55; cursor: not-allowed; }
-    .msg { font-size: 12px; line-height: 1.45; color: #d5def0; margin: 0 0 8px; white-space: pre-wrap; }
-    .msg.status { color: #86efac; }
-    .msg.error { color: #fecaca; background: rgba(239,68,68,.12); padding: 8px; border-radius: 8px; }
-    .row { display: flex; gap: 8px; }
-    .copy, .stop {
-      flex: 1; border: none; border-radius: 10px; padding: 10px; font-weight: 700; cursor: pointer;
+    .run-btn.running:hover { background: #b91c1c; }
+    button:focus-visible, textarea:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 2px; }
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+      margin-right: 6px;
     }
-    .copy { background: #1a1a1b; color: #c5d4f0; }
-    .stop { background: transparent; color: #fca5a5; }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulse-border {
+      0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+      100% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+    }
+    @media (max-width: 420px) {
+      .panel-context { display: none; }
+    }
   </style>
 </head>
 <body>
   <div class="top">
-    <div class="brand"><img src="/assets/viszmofull.png" alt="Viszmo" class="brand-logo"></div>
+    <div class="brand">
+      <img src="/assets/viszmofull.png" alt="Viszmo" class="brand-logo">
+      <div class="panel-context"><strong>Assignment panel</strong><span>Focused workspace</span></div>
+    </div>
     <div class="top-right">
-      <button class="close" id="hideBtn" type="button" title="Hide sidebar" onclick="hideSidebar()" aria-label="Hide sidebar">
+      <div class="connection-status" id="connectionStatus"><span class="connection-dot" aria-hidden="true"></span><span id="connectionStatusText">Waiting for tab</span></div>
+      <button class="icon-btn" id="copyBtn" type="button" title="Copy log" onclick="copyLog()" aria-label="Copy log">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="hideBtn" type="button" title="Hide sidebar" onclick="hideSidebar()" aria-label="Hide sidebar">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M6 6l12 12M18 6L6 18"/>
         </svg>
       </button>
     </div>
   </div>
-  <div class="auto-hint">Subject, question type, and answer format are detected from the workspace.</div>
-  <div class="launch-wrap">
-    <button class="launch" id="launchBtn" type="button" onclick="launch()">Launch</button>
+  <div class="mode-section">
+    <div class="section-heading"><strong>Subject</strong><span>What are you working on?</span></div>
+    <div class="mode-row" id="modeRow" role="group" aria-label="Subject">
+      <button class="mode-btn on" id="modeMath" type="button" aria-pressed="true" onclick="setMode('math')">Math &amp; STEM</button>
+      <button class="mode-btn" id="modeGeneral" type="button" aria-pressed="false" onclick="setMode('general')">General subjects</button>
+    </div>
   </div>
-  <ul class="check" id="checklist">
-    <li id="c1">Checking question state</li>
-    <li id="c2">Focusing answer box</li>
-    <li id="c3">Entering answer...</li>
-    <li id="c4">Clicking Check Answer</li>
-  </ul>
+  <div class="mode-section">
+    <div class="section-heading"><strong>Assist level</strong><span>How should Viszmo help?</span></div>
+    <div class="mode-row" id="autonomyRow" role="group" aria-label="Assist level">
+      <button class="mode-btn" id="modeCopilot" type="button" aria-pressed="false" onclick="setAutonomy('copilot')">Copilot</button>
+      <button class="mode-btn on" id="modeAutopilot" type="button" aria-pressed="true" onclick="setAutonomy('autopilot')">Autopilot</button>
+      <button class="mode-btn" id="modeDry" type="button" aria-pressed="false" onclick="setAutonomy('dry_run')">Review first</button>
+    </div>
+  </div>
+  <div class="mode-hint" id="modeHint">STEM: algebra, calc, stats, physics, chemistry, graphs.</div>
+  <div class="activity-header"><span>Activity</span><span id="activityState">Ready</span></div>
   <div class="logs" id="chat">
-    <div class="msg">Open the assignment tab. Viszmo connects to it below. Press Launch, or send a note from the chat box.</div>
+    <div class="msg welcome"><strong>Ready when you are</strong><span>Choose an assist level, add an optional note, then start a task.</span></div>
   </div>
   <div class="composer" id="composer">
+    <div class="composer-heading"><span>Tell Viszmo what to do</span><span>Optional note</span></div>
     <div class="tab-chip" id="tabChip">
       <div class="tab-icon" id="tabIcon">T</div>
       <div class="tab-text" id="tabText">Looking for a tab…</div>
       <button class="tab-x" id="tabClear" type="button" title="Hide tab" onclick="clearTab(event)" aria-label="Hide connected tab">×</button>
     </div>
-    <textarea id="notes" rows="3" placeholder="Add a note for this tab…"></textarea>
+    <textarea id="notes" rows="3" placeholder="Example: Solve the current question and explain why…"></textarea>
     <div class="composer-bar">
-      <span class="composer-hint" id="composerHint">Connected to the page on the left</span>
-      <button class="send" id="sendBtn" type="button" title="Launch" onclick="launch()" aria-label="Launch">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.6 21 12 3.4 3.4 3.4 10l11 2-11 2z"/></svg>
-      </button>
+      <span class="keyboard-help">Enter to start · Shift+Enter for a new line</span>
+      <button class="run-btn" id="sendBtn" type="button" title="Start task" onclick="launch()" aria-label="Start task">Start task</button>
     </div>
-  </div>
-  <div class="actions row">
-    <button class="copy" id="copyBtn" type="button" onclick="copyLog()">Copy log</button>
-    <button class="stop" type="button" onclick="abortTask()">⏹ Stop (Esc)</button>
   </div>
   <script>
     const chat = document.getElementById("chat");
-    const launchBtn = document.getElementById("launchBtn");
+    const launchBtn = null;
     const notes = document.getElementById("notes");
     const sendBtn = document.getElementById("sendBtn");
+    const activityState = document.getElementById("activityState");
+    const connectionStatus = document.getElementById("connectionStatus");
+    const connectionStatusText = document.getElementById("connectionStatusText");
     const logLines = [];
-    let ws = null, running = false, reconnectTimer = null, tabTimer = null;
+    const answerLines = [];
+    let ws = null, running = false, stopping = false, reconnectTimer = null, tabTimer = null;
     let tabHidden = false;
     let lastTabTitle = "";
+    let selectedMode = "math";
+    let selectedAutonomy = "autopilot";
+    try {
+      if (localStorage.getItem("viszmoMode") === "general") selectedMode = "general";
+      const savedAutonomy = localStorage.getItem("viszmoAutonomy");
+      if (savedAutonomy === "copilot" || savedAutonomy === "dry_run") selectedAutonomy = savedAutonomy;
+    } catch (e) {}
+
+    function refreshModeHint() {
+      const hint = document.getElementById("modeHint");
+      const copyBtn = document.getElementById("copyBtn");
+      if (!hint) return;
+      hint.className = "mode-hint" + (selectedMode === "general" ? " fast" : "");
+      if (selectedAutonomy === "copilot") {
+        hint.textContent = "Copilot suggests answers here. You review, enter, and submit them yourself.";
+        if (copyBtn) {
+          copyBtn.title = "Copy answers";
+          copyBtn.setAttribute("aria-label", "Copy answers");
+        }
+      } else if (selectedAutonomy === "dry_run") {
+        hint.textContent = selectedMode === "math"
+          ? "Review first fills in STEM answers for you, but never clicks Submit."
+          : "Review first fills answers quickly, but never clicks Submit.";
+        if (copyBtn) {
+          copyBtn.title = "Copy log";
+          copyBtn.setAttribute("aria-label", "Copy log");
+        }
+      } else {
+        hint.textContent = selectedMode === "math"
+          ? "Autopilot reads the page, answers the question, and can move to the next one."
+          : "Autopilot handles reading, vocabulary, history, and civics quickly.";
+        if (copyBtn) {
+          copyBtn.title = "Copy log";
+          copyBtn.setAttribute("aria-label", "Copy log");
+        }
+      }
+    }
+
+    function setMode(mode) {
+      selectedMode = mode === "general" ? "general" : "math";
+      try { localStorage.setItem("viszmoMode", selectedMode); } catch (e) {}
+      document.getElementById("modeMath").className = "mode-btn" + (selectedMode === "math" ? " on" : "");
+      document.getElementById("modeGeneral").className = "mode-btn" + (selectedMode === "general" ? " on" : "");
+      document.getElementById("modeMath").setAttribute("aria-pressed", String(selectedMode === "math"));
+      document.getElementById("modeGeneral").setAttribute("aria-pressed", String(selectedMode === "general"));
+      refreshModeHint();
+    }
+
+    function setAutonomy(autonomy) {
+      selectedAutonomy = (autonomy === "copilot" || autonomy === "dry_run") ? autonomy : "autopilot";
+      try { localStorage.setItem("viszmoAutonomy", selectedAutonomy); } catch (e) {}
+      document.getElementById("modeCopilot").className = "mode-btn" + (selectedAutonomy === "copilot" ? " on" : "");
+      document.getElementById("modeAutopilot").className = "mode-btn" + (selectedAutonomy === "autopilot" ? " on" : "");
+      const dryBtn = document.getElementById("modeDry");
+      if (dryBtn) dryBtn.className = "mode-btn" + (selectedAutonomy === "dry_run" ? " on" : "");
+      document.getElementById("modeCopilot").setAttribute("aria-pressed", String(selectedAutonomy === "copilot"));
+      document.getElementById("modeAutopilot").setAttribute("aria-pressed", String(selectedAutonomy === "autopilot"));
+      if (dryBtn) dryBtn.setAttribute("aria-pressed", String(selectedAutonomy === "dry_run"));
+      refreshModeHint();
+    }
+
+    function setActivityState(text) {
+      if (activityState) activityState.textContent = text;
+    }
+
+    function setConnectionState(connected, label) {
+      if (!connectionStatus || !connectionStatusText) return;
+      connectionStatus.classList.toggle("ready", Boolean(connected));
+      connectionStatus.classList.toggle("offline", label === "Tab hidden");
+      connectionStatusText.textContent = label;
+    }
 
     function setRunning(value) {
       running = value;
-      launchBtn.disabled = value;
-      sendBtn.disabled = value;
-      notes.disabled = value;
-    }
-    function markCheck(text) {
-      const map = [
-        ["state", "c1"],
-        ["evaluat", "c1"],
-        ["focus", "c2"],
-        ["entering", "c3"],
-        ["check", "c4"],
-        ["next", "c4"],
-        ["submit", "c4"],
-      ];
-      const lower = (text || "").toLowerCase();
-      for (const [key, id] of map) {
-        if (lower.includes(key)) {
-          const el = document.getElementById(id);
-          if (el) { el.className = "on"; }
+      if (notes) notes.disabled = value || stopping;
+      setActivityState(stopping ? "Stopping" : (value ? "Working" : "Ready"));
+      if (sendBtn) {
+        if (stopping) {
+          sendBtn.innerHTML = '<span class="spinner"></span>Stopping';
+          sendBtn.classList.add("running");
+          sendBtn.title = "Stopping";
+          sendBtn.setAttribute("aria-label", "Stopping");
+          sendBtn.disabled = true;
+        } else if (value) {
+          sendBtn.innerHTML = '<span class="spinner"></span>Stop task';
+          sendBtn.classList.add("running");
+          sendBtn.title = "Stop task";
+          sendBtn.setAttribute("aria-label", "Stop task");
+          sendBtn.disabled = false;
+        } else {
+          sendBtn.innerHTML = 'Start task';
+          sendBtn.classList.remove("running");
+          sendBtn.title = "Start task";
+          sendBtn.setAttribute("aria-label", "Start task");
+          sendBtn.disabled = false;
         }
       }
     }
@@ -178,11 +335,44 @@
       chat.scrollTop = chat.scrollHeight;
       logLines.push((kind === "error" ? "ERROR: " : "") + text);
     }
+    function appendAnswer(msg) {
+      const number = Number(msg.number || answerLines.length + 1);
+      const question = String(msg.question || "Current question").trim();
+      const answer = String(msg.answer || "No answer returned").trim();
+      const card = document.createElement("div");
+      card.className = "msg answer";
+      const title = document.createElement("div");
+      title.className = "answer-title";
+      title.textContent = "Question " + number;
+      const questionEl = document.createElement("div");
+      questionEl.className = "answer-question";
+      questionEl.textContent = question;
+      const answerEl = document.createElement("div");
+      answerEl.className = "answer-value";
+      answerEl.textContent = "Answer: " + answer;
+      card.appendChild(title);
+      card.appendChild(questionEl);
+      card.appendChild(answerEl);
+      chat.appendChild(card);
+      chat.scrollTop = chat.scrollHeight;
+      answerLines.push(number + ". " + answer);
+    }
     function copyLog() {
       const selected = (window.getSelection && window.getSelection().toString()) || "";
-      const text = selected.trim() || logLines.join("\n");
+      const transcript = selectedAutonomy === "copilot" && answerLines.length
+        ? answerLines.join("\n")
+        : logLines.join("\n");
+      const text = selected.trim() || transcript;
       const btn = document.getElementById("copyBtn");
-      const done = () => { btn.textContent = "Copied"; setTimeout(() => btn.textContent = "Copy log", 1200); };
+      const defaultTitle = selectedAutonomy === "copilot" ? "Copy answers" : "Copy log";
+      const done = () => {
+        btn.classList.add("copied");
+        btn.setAttribute("title", "Copied!");
+        setTimeout(() => {
+          btn.classList.remove("copied");
+          btn.setAttribute("title", defaultTitle);
+        }, 1200);
+      };
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
       } else fallbackCopy(text, done);
@@ -204,47 +394,103 @@
     function connect() {
       if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
       ws = new WebSocket(wsUrl());
-      ws.onopen = () => {};
-      ws.onclose = () => { setRunning(false); reconnectTimer = setTimeout(connect, 1200); };
+      ws.onopen = () => { if (!running) setActivityState("Ready"); };
+      ws.onclose = () => {
+        stopping = false;
+        setRunning(false);
+        setActivityState("Reconnecting");
+        reconnectTimer = setTimeout(connect, 1200);
+      };
       ws.onerror = () => {};
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
-        if (msg.type === "status" || msg.type === "progress") {
-          markCheck(msg.text || "");
-          if (msg.type === "progress") setRunning(true);
+        if (msg.type === "copilot_answer") {
+          appendAnswer(msg);
+        } else if (msg.type === "copilot_complete") {
+          stopping = false;
+          setRunning(false);
+          appendMessage(msg.text || "Copilot finished collecting answers.", "status");
+        } else if (selectedAutonomy === "copilot" && ["status", "progress", "thought", "log", "usage", "usage_summary"].includes(msg.type)) {
+          // Copilot is a transcript, not a technical log. Keep the button
+          // responsive while hiding provider/model progress noise.
+          if (msg.type === "progress" && !stopping) setRunning(true);
+        } else if (msg.type === "status" || msg.type === "progress") {
+          if (msg.type === "progress" && !stopping) setRunning(true);
           appendMessage(msg.text, "status");
         } else if (msg.type === "thought" || msg.type === "log") {
           appendMessage(msg.text, "agent");
+        } else if (msg.type === "usage" || msg.type === "usage_summary") {
+          appendMessage(msg.text, "status");
         } else if (msg.type === "done") {
+          stopping = false;
           setRunning(false);
-          ["c1","c2","c3","c4"].forEach((id) => { const el = document.getElementById(id); if (el) el.className = "done"; });
           appendMessage("✔ " + (msg.text || "Finished"), "status");
         } else if (msg.type === "aborted") {
+          appendMessage(msg.text || "Stopping…", stopping ? "status" : "error");
+          if (!stopping) setRunning(false);
+        } else if (msg.type === "stopped") {
+          stopping = false;
           setRunning(false);
-          appendMessage(msg.text || "Stopped", "error");
+          appendMessage(msg.text || "Stopped", "status");
+        } else if (msg.type === "copilot") {
+          stopping = false;
+          setRunning(false);
+          appendMessage(msg.text || "Copilot finished.", "status");
         } else if (msg.type === "error") {
+          stopping = false;
           setRunning(false);
           appendMessage(msg.text, "error");
         }
       };
     }
     function launch() {
-      if (!ws || ws.readyState !== WebSocket.OPEN || running) return;
+      if (stopping) return;
+      if (running) {
+        abortTask();
+        return;
+      }
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
       setRunning(true);
-      ["c1","c2","c3","c4"].forEach((id) => { const el = document.getElementById(id); if (el) el.className = ""; });
-      appendMessage("Launching…", "status");
+      const label = selectedMode === "math" ? "Math" : "General";
+      const behavior = selectedAutonomy === "copilot" ? "Copilot" : (selectedAutonomy === "dry_run" ? "Dry run" : "Autopilot");
+      if (selectedAutonomy === "copilot") {
+        answerLines.length = 0;
+        logLines.length = 0;
+        chat.innerHTML = "";
+        appendMessage("Copilot is collecting answers…", "status");
+      } else {
+        appendMessage("Launching (" + label + " / " + behavior + ")…", "status");
+      }
       ws.send(JSON.stringify({
         type: "launch",
+        mode: selectedMode,
+        autonomy: selectedAutonomy,
         sidebar_width: 380,
         notes: (notes.value || "").trim(),
       }));
     }
-    function abortTask() {
+
+    function requestStop() {
+      if (stopping) return;
+      stopping = true;
       if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "abort" }));
       setRunning(false);
+      setTimeout(() => {
+        if (!stopping) return;
+        stopping = false;
+        setRunning(false);
+        appendMessage("Stop is taking longer than expected; the next Run will retry cleanup.", "error");
+      }, 6000);
+    }
+
+    function abortTask() {
+      requestStop();
     }
     function hideSidebar() {
-      abortTask();
+      if (window.viszmo && window.viszmo.hideWorkspace) {
+        window.viszmo.hideWorkspace();
+        return;
+      }
       if (window.pywebview && window.pywebview.api && window.pywebview.api.hide) {
         window.pywebview.api.hide();
       }
@@ -257,12 +503,11 @@
       const chip = document.getElementById("tabChip");
       const text = document.getElementById("tabText");
       const icon = document.getElementById("tabIcon");
-      const hint = document.getElementById("composerHint");
       if (tabHidden) {
         chip.className = "tab-chip off";
         text.textContent = "Tab hidden — click to reconnect";
         icon.textContent = "+";
-        hint.textContent = "Reconnect to send this page with Launch";
+        setConnectionState(false, "Tab hidden");
         return;
       }
       const connected = Boolean(data && data.connected);
@@ -270,13 +515,13 @@
       chip.className = "tab-chip";
       if (connected && title) {
         lastTabTitle = title;
-        text.textContent = 'Sharing "' + title + '"';
+        text.textContent = 'Assignment browser: "' + title + '"';
         icon.textContent = tabLetter(title);
-        hint.textContent = "Notes go with this tab";
+        setConnectionState(true, "Connected");
       } else {
         text.textContent = "Open the assignment tab on the left";
         icon.textContent = "?";
-        hint.textContent = "Viszmo will connect to that page";
+        setConnectionState(false, "Waiting for tab");
       }
     }
     function clearTab(event) {
@@ -303,6 +548,13 @@
         showTab({ connected: false });
       }
     }
+    async function loadConfig() {
+      try {
+        const res = await fetch("/config");
+        const config = await res.json();
+        if (config && config.initial_task && !notes.value) notes.value = config.initial_task;
+      } catch (e) {}
+    }
     notes.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
@@ -314,8 +566,11 @@
       if (event.target === notes) return;
       if (event.key === "Escape") abortTask();
     });
+    loadConfig();
     pollTab();
     tabTimer = setInterval(pollTab, 700);
+    setMode(selectedMode);
+    setAutonomy(selectedAutonomy);
     connect();
   </script>
 </body>
